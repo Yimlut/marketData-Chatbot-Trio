@@ -1,0 +1,180 @@
+Canadian Govt Bonds 3 Month Bill,GCAN3M Index
+Canadian Govt Bonds 6 Month Bill,GCAN6M Index
+Canadian Govt Bonds 1 Year Bill,GCAN12M Index
+Canadian Govt Bonds 2 Year Note,GCAN2YR Index
+Canadian Govt Bonds 3 Year Note,GCAN3YR Index
+Canadian Govt Bonds 4 Year Note,GCAN4YR Index
+Canadian Govt Bonds 5 Year Note,GCAN5YR Index
+Canadian Govt Bonds 7 Year Note,GCAN7YR Index
+Canadian Govt Bonds 10 Year Note,GCAN10YR Index
+Canadian Govt Bonds 20 Year Note,GCAN20YR Index
+Canadian Govt Bonds 30 Year Note,GCAN30YR Index
+US Generic Govt 3 Mth,USGG3M Index
+US Generic Govt 6 Mth,USGG6M Index
+US Generic Govt 12 Mth,USGG12M Index
+US Generic Govt 2 Yr,USGG2YR Index
+US Generic Govt 3 Yr,USGG3YR Index
+US Generic Govt 5 Yr,USGG5YR Index
+US Generic Govt 7 Yr,USGG7YR Index
+US Generic Govt 10 Yr,USGG10YR Index
+US Generic Govt 30 Yr,USGG30YR Index
+UK Gilts 3 Month,GUKG3M Index
+UK Gilts 6 Month,GUKG6M Index
+UK Gilts 1 Year,GUKG1 Index
+UK Gilts 2 Year,GUKG2 Index
+UK Gilts 3 Year,GUKG3 Index
+UK Gilts 4 Year,GUKG4 Index
+UK Gilts 5 Year,GUKG5 Index
+UK Gilts 6 Year,GUKG6 Index
+UK Gilts 7 Year,GUKG7 Index
+UK Gilts 10 Yr,GUKG10 Index
+UK Gilts 15 Year,GUKG15 Index
+UK Gilts 20 Year,GUKG20 Index
+UK Gilts 30 Year,GUKG30 Index
+UK Gilts 40 Year,GUKG40 Index
+HKD Hong Kong Government Bond BVAL Yield Curve 10 Year,BV100125 Index
+China Govt Bond Generic Bid Yield 10 Year,GCNY10YR Index
+Philippine Government Bond,CTPHP10Y Govt
+Philippine Government Bond,GTPHP10Y Govt
+PHP Philippine Government Bond BVAL Yield Curve 10 Year,BICTRPGB Index
+Philippine Government Bond,GTPHP20Y Govt
+Indonesia Govt Bond Generic Bid Yield 10 Year,GIDN10YR Index
+Indonesia Govt Bond Generic Bid Yield 20 Year,GIDN20YR Index
+Indonesia USD Govt Bond Generic Bid Yield 20 Year,GIDU20Y Index
+Malaysia Govt Bonds 10 Year Yield,MAGY10YR Index
+Vietnam Government Benchmark Bond 10 Year,GGVB10Y Index
+India Govt Bond Generic Bid Yield 10 Year,GIND10YR Index
+Singapore Government Bond,GTSGD10Y Govt
+GERMANY GOVT BND 10 YR DBR,GDBR10 Index
+United States SOFR Secured Overnight Financing Rate,SOFRRATE Index
+US Federal Funds Effective Rate (continuous series),FEDL01 Index
+ICE BofA MOVE Index,MOVE Index
+Bloomberg US Agg Credit Avg OAS,LUCROAS Index
+Bloomberg Canadian Aggregate Corporate Average OAS,LCANOAS Index
+Bloomberg US Agg Corporate Avg OAS,LUACOAS Index
+Bloomberg US Corporate High Yield Average OAS,LF98OAS Index
+Bloomberg US Agg Corporate Market Value USD,LUACMVU Index
+Bloomberg US Corporate High Yield Market Value USD,LF98MVU Index
+Bloomberg Baa Corporate Average OAS,LCB1OAS Index
+Bloomberg Ba US High Yield Average OAS,BCBAOAS Index
+Bloomberg US Agg Industrial Avg OAS,LUAIOAS Index
+US Corporate BAA 10 Year Spread,BICLB10Y Index
+US Corporate A 10 Year Spread,BICLA10Y Index
+Bloomberg Sterling Non-Gilts Avg OAS,LC72OAS Index
+S&P/TSX Composite Index,SPTSX Index
+S&P/TSX 60 Index,SPTSX60 Index
+MSCI EAFE Index,MXEA Index
+MSCI EAFE Local,MSDLEAFE Index
+S&P 500 INDEX,SPX Index
+Dow Jones Industrial Average,INDU Index
+FTSE 100 Index,UKX Index
+FTSE All-Share Index,ASX Index
+Philippines Stock Exchange PSEi Index,PCOMP Index
+Hang Seng Index,HSI Index
+Jakarta Stock Exchange Composite Index,JCI Index
+Nikkei 225,NKY Index
+NASDAQ Composite Index,CCMP Index
+Russell 3000 Index,RAY Index
+Russell 2000 Index,RTY Index
+Russell 1000 Growth Index,RLG Index
+Russell 1000 Value Index,RLV Index
+EURO STOXX 50 Price EUR,SX5E Index
+MSCI Emerging Markets Index,MXEF Index
+Shanghai Stock Exchange Composite Index,SHCOMP Index
+Shanghai Shenzhen CSI 300 Index,SHSZ300 Index
+MSCI AC Asia Ex. Japan Index,MXASJ Index
+Vietnam Ho Chi Minh Stock Index / VN-Index,VNINDEX Index
+FTSE Bursa Malaysia KLCI Index - Kuala Lumpur Composite Index,FBMKLCI Index
+NSE Nifty 50 Index,NIFTY Index
+Cboe Volatility Index,VIX Index
+EURO STOXX 50 Volatility Index VSTOXX,V2X Index
+CADUSD Spot Exchange Rate - Price of 1 CAD in USD,CADUSD Curncy
+CADGBP Spot Exchange Rate - Price of 1 CAD in GBP,CADGBP Curncy
+CADEUR Spot Exchange Rate - Price of 1 CAD in EUR,CADEUR Curncy
+CADPHP Spot Exchange Rate - Price of 1 CAD in PHP,CADPHP Curncy
+PHPCAD Spot Exchange Rate - Price of 100 PHP in CAD,PHPCAD Curncy
+CADHKD Spot Exchange Rate - Price of 1 CAD in HKD,CADHKD Curncy
+HKDCAD Spot Exchange Rate - Price of 1 HKD in CAD,HKDCAD Curncy
+USDCAD Spot Exchange Rate - Price of 1 USD in CAD,USDCAD Curncy
+GBPCAD Spot Exchange Rate - Price of 1 GBP in CAD,GBPCAD Curncy
+GBPUSD Spot Exchange Rate - Price of 1 GBP in USD,GBPUSD Curncy
+EURUSD Spot Exchange Rate - Price of 1 EUR in USD,EURUSD Curncy
+USDCNY Spot Exchange Rate - Price of 1 USD in CNY,USDCNY Curncy
+USDGBP Spot Exchange Rate - Price of 1 USD in GBP,USDGBP Curncy
+USDHKD Spot Exchange Rate - Price of 1 USD in HKD,USDHKD Curncy
+Sun Life Financial Inc (Canada),SLF CN Equity
+Sun Life Financial Inc (USA),SLF US Equity
+Sun Life Financial Inc (Philippines),SLF PM Equity
+Manulife Financial Corp,MFC CN Equity
+Great-West Lifeco Inc,GWO CN Equity
+iA Financial Corp Inc,IAG CN Equity
+GOLD SPOT $/OZ,GOLDS Comdty
+WTI CRUDE,CLA Comdty
+BRENT CRUDE,COA Comdty
+Crude Oil Domestic Sweet (DSW) Cushing Cash Formula (Cushing Cash Expiry),USCRWTIC Index
+NATURAL GAS,NGA Comdty
+XBTUSD Spot Exchange Rate - Price of 1 XBT in USD,XBT Curncy
+CAD Swap Spread CORRA 2Y,CDCRCT2 Curncy
+CAD Swap Spread CORRA 5Y,CDCRCT5 Curncy
+CAD Swap Sprd CORRA 10Y,CDCRCT10 Curncy
+CAD Swap Sprd CORRA 20Y,CDCRCT20 Curncy
+CAD Swap Sprd CORRA 25Y,CDCRCT25 Curncy
+CAD Swap Sprd CORRA 30Y,CDCRCT30 Curncy
+USD Swap Spread SOFR 2Y,USSFCT02 Curncy
+USD Swap Spread SOFR 5Y,USSFCT05 Curncy
+USD Swap Spread SOFR 10Y,USSFCT10 Curncy
+USD Swap Spread SOFR 20Y,USSFCT20 Curncy
+USD Swap Spread SOFR 30Y,USSFCT30 Curncy
+GBP SWAP (vs SONIA) 2Y,BPSWS2 Curncy
+GBP SWAP (vs SONIA) 5Y,BPSWS5 Curncy
+GBP SWAP (vs SONIA) 10Y,BPSWS10 Curncy
+GBP SWAP (vs SONIA) 20Y,BPSWS20 Curncy
+GBP SWAP (vs SONIA) 30Y,BPSWS30 Curncy
+GBP SWAP (vs SONIA) 40Y,BPSWS40 Curncy
+US Generic Govt 10 Yr,USGG10Y Index
+US Generic Govt 20 Yr,USGG20Y Index
+USD US Corporate BBB+ BBB BBB- BVAL Yield Curve 10 Year,IGUUBC10 Index
+USD US Corporate BBB+ BBB BBB- BVAL Yield Curve 20 Year,IGUUBC20 Index
+USD US Corporate A+ A  A- BVAL Yield Curve 10 Year,IGUUAC10 Index
+USD US Corporate A+ A  A- BVAL Yield Curve 20 Year,IGUUAC20 Index
+Canadian Govt Bonds 3 Month Bill,GCAN3M Index 
+Canadian Govt Bonds 1 Year Bill,GCAN12M Index 
+Canadian Govt Bonds 3 Year Note,GCAN3YR Index 
+Canadian Govt Bonds 5 Year Note,GCAN5YR Index 
+Canadian Govt Bonds 10 Year Note,GCAN10Y Index 
+Canadian Govt Bonds 20 Year Note,GCAN20Y Index 
+Canadian Govt Bonds 30 Year Note,GCAN30Y Index 
+CAD Canada Corporate BBB+ BBB  BBB- BVAL Yield Curve 5 Year,BVCSCM05 Index 
+CAD Canada Corporate BBB+ BBB  BBB- BVAL Yield Curve 10 Year,BVCSCM10 Index 
+CAD Canada Corporate BBB+ BBB  BBB- BVAL Yield Curve 20 Year,BVCSCM20 Index 
+CAD Canada Corporate BBB+ BBB  BBB- BVAL Yield Curve 30 Year,BVCSCM30 Index 
+CAD Canada Corporate A+ A  A- BVAL Yield Curve 5 Year,BVCSCD05 Index
+CAD Canada Corporate A+ A  A- BVAL Yield Curve 10 Year,BVCSCD10 Index
+CAD Canada Corporate A+ A  A- BVAL Yield Curve 20 Year,BVCSCD20 Index
+CAD Canada Corporate A+ A  A- BVAL Yield Curve 30 Year,BVCSCD30 Index
+CAD Canada Corporate A+ A  A- BVAL Yield Curve 3 Month,BVCSCD3M Index
+CAD Canada Corporate A+ A  A- BVAL Yield Curve 3 Year,BVCSCD03 Index
+CAD Province of Ontario Canada BVAL Yield Curve 30 Year,IB30ONT Index
+CAD Province of Ontario Canada BVAL Yield Curve 20 Year,IB20ONT Index
+CAD Province of Ontario Canada BVAL Yield Curve 10 Year,IB10ONT Index
+CAD Province of Quebec Canada BVAL Yield Curve 30 Year,IB30QUE Index
+CAD Province of Quebec Canada BVAL Yield Curve 20 Year,IB20QUE Index
+CAD Province of Quebec Canada BVAL Yield Curve 10 Year,IB10QUE Index
+CAD Canada Provincial Strips BVAL Yield Curve 1 Year,BVCSCT01 BVLI Index
+CAD Canada Municipals BVAL Curve 1 Year,BVCSCF01 BVLI Index
+CAD Canada Municipals BVAL Curve 10 Year,BVCSCF10 BVLI Index
+CAD Canada Municipals BVAL Curve 30 Year,BVCSCF30 BVLI Index
+CAD Canada Provincial Strips BVAL Yield Curve 30 Year,BVCSCT30 BVLI Index
+GBP Europe Composite A+ A  A- BVAL Yield Curve 4 Year,BVCSGK04 Index
+GBP Europe Composite A+ A  A- BVAL Yield Curve 5 Year,BVCSGK05 Index
+GBP Europe Composite A+ A  A- BVAL Yield Curve 7 Year,BVCSGK07 Index
+CAD SWAP OIS 10Y,CDSO10 Curncy
+CORRA-SOFR BASIS SWAP10Y,CDXOQQ10 Curncy
+HKD SWAP QTR (VS 3M) 10Y,HDSW10 Curncy
+HIBOR/SOFR Q/Q 10Y,HISOQ10 Curncy
+USD OIS  ANN VS SOFR 10Y,USOSFR10 Curncy
+Bloomberg USDEUR 3 Month Hedging Cost,FXHCUSEU Index
+Bloomberg USDJPY 3 Month Hedging Cost,FXHCUSJP Index
+Euro Generic Govt Bond 10 Year,GECU10YR Index
+Japan Govt 10 Yr,GJGB10 Index
+GBPCAD 3 Month Cross Forward Points,GBPCAD3M Curncy

@@ -1,0 +1,6 @@
+id,question,answer,aliases,tags
+SLC1,What is the data source?,Bloomberg,,
+SLC2,Why is the price different from my source?,We are using Bloomberg prices. Readings may be different from varying sources.,,
+SLC3,Can I use this report for financial reporting?,We are using AI that may have mistakes. Please don't use as inputs for financial reporting.,,
+SLC4,Why are some of the numbers blank?,We leave them blank if data are not available in Bloomberg.,,
+SLC5,Can you remove me from the distribution list?,Sorry I don't have time for that. Use Outlook filters yourself.,,
