@@ -3,6 +3,11 @@
 # V5 changes:
 #  - add start and end date price for price change/return function. Add asset 1 and asset 2 price for comparison function
 #  - add "Erase" button
+#
+# v5.1 (this change):
+#  - auto-refresh cached workbook/prices/mapping when underlying files change (mtime stamp)
+#  - add "Reload data" buttons for Market Monitor + Time-Series
+#  - KB cache writes to /tmp for Streamlit Cloud safety
 
 from __future__ import annotations
 
@@ -70,19 +75,17 @@ def get_openai_client():
         return None
 
 
-# ---------- Import your existing tools (no changes to their code) ----------
+# ---------- Import your existing tools ----------
 # NOTE: These imports must happen AFTER we bootstrap OPENAI_API_KEY into env.
 
-# Market Monitor v31 (Q&A over workbook + manual calculator)
 from marketMonitorChatbot_AgenticAI_Canonicalization_Batch_v31 import (
     MarketMonitorChatbot,
     MarketData,
-    _iso,                  # helper for dates
-    EXCEL_PATH,            # default workbook path
+    _iso,
+    EXCEL_PATH,
     render_manual_calculator,
 )
 
-# Time-Series analyzer (parsing + charts)
 from timeseries_tool_v6 import (
     load_prices,
     analyze_asset,
@@ -157,23 +160,50 @@ st.set_page_config(
 st.markdown(TOOLTIP_CSS, unsafe_allow_html=True)
 
 
+# ---------- File stamp helper (NEW) ----------
+
+def _file_stamp(path: str) -> float:
+    """
+    Returns a numeric "version" for a local file, used to bust Streamlit caches.
+    If file doesn't exist or isn't accessible, returns 0.
+    """
+    try:
+        return float(os.path.getmtime(path))
+    except Exception:
+        return 0.0
+
+
 # ---------- CACHED LOADERS (isolated per tool) ----------
 
 @st.cache_resource(show_spinner=True)
-def get_mm(md_path: str) -> tuple[MarketData, MarketMonitorChatbot]:
-    """Cache Market Monitor workbook + chatbot (v31)."""
+def get_mm(md_path: str, stamp: float) -> tuple[MarketData, MarketMonitorChatbot]:
+    """
+    Cache Market Monitor workbook + chatbot (v31).
+    The 'stamp' argument forces a refresh when the workbook file changes.
+    """
+    _ = stamp  # included only to invalidate cache when file changes
     md = MarketData(md_path)
     bot = MarketMonitorChatbot(md)
     return md, bot
 
-@st.cache_resource(show_spinner=True)
-def get_prices(file_path: str, sheet: str | None) -> pd.DataFrame:
-    """Cache time-series DataFrame (timeseries_tool_v6)."""
-    return load_prices(file_path, sheet=sheet)
 
 @st.cache_resource(show_spinner=True)
-def get_mapping(map_path: str) -> pd.DataFrame:
-    """Cache ticker-name mapping for the time-series tool."""
+def get_prices(file_path: str, sheet: str | None, stamp: float) -> pd.DataFrame:
+    """
+    Cache time-series DataFrame (timeseries_tool_v6).
+    The 'stamp' argument forces a refresh when the file changes.
+    """
+    _ = stamp
+    return load_prices(file_path, sheet=sheet)
+
+
+@st.cache_resource(show_spinner=True)
+def get_mapping(map_path: str, stamp: float) -> pd.DataFrame:
+    """
+    Cache ticker-name mapping for the time-series tool.
+    The 'stamp' argument forces a refresh when the mapping file changes.
+    """
+    _ = stamp
     return load_mapping(map_path)
 
 
@@ -188,7 +218,7 @@ def _fmt_pct(x: float) -> str:
 
 
 # ============================================================
-# TAB 1: Market Monitor Chatbot (v31 UI + manual calculator)
+# TAB 1: Market Monitor Chatbot
 # ============================================================
 
 def render_market_monitor_tab():
@@ -206,8 +236,15 @@ def render_market_monitor_tab():
             key="mm_workbook",
         )
 
+        # Manual reload button (NEW)
+        if st.button("🔄 Reload workbook data", key="mm_reload_btn", use_container_width=True):
+            st.cache_resource.clear()
+            st.rerun()
+
+        # Load workbook + bot (cache busted by file stamp)
         try:
-            md, bot = get_mm(workbook)
+            stamp = _file_stamp(workbook)
+            md, bot = get_mm(workbook, stamp)
         except Exception as e:
             st.error(f"Failed to load workbook: {e}")
             return
@@ -401,20 +438,29 @@ def render_timeseries_tab():
 
     with right:
         st.subheader("Data")
+
         ts_file = st.text_input("Prices file (CSV/XLSX)", value="Market Monitor - blp.xlsx", key="ts_file")
         ts_sheet = st.text_input("Excel sheet (optional)", value="BBG Data", key="ts_sheet")
         map_path = st.text_input("TickerNameMapping.csv path", value="TickerNameMapping.csv", key="ts_map")
 
+        # Manual reload button (NEW)
+        if st.button("🔄 Reload time-series inputs", key="ts_reload_btn", use_container_width=True):
+            st.cache_resource.clear()
+            st.rerun()
+
         df = None
         mapping_df = None
+
         try:
-            df = get_prices(ts_file, ts_sheet or None)
+            df_stamp = _file_stamp(ts_file)
+            df = get_prices(ts_file, ts_sheet or None, df_stamp)
             st.caption(f"Loaded prices: shape={df.shape}")
         except Exception as e:
             st.error(f"Failed to load price file: {e}")
 
         try:
-            mapping_df = get_mapping(map_path)
+            map_stamp = _file_stamp(map_path)
+            mapping_df = get_mapping(map_path, map_stamp)
             st.caption(f"Loaded mapping: {mapping_df.shape[0]} rows")
         except Exception as e:
             st.error(f"Failed to load mapping: {e}")
@@ -426,7 +472,11 @@ def render_timeseries_tab():
             st.session_state["ts_history"] = []
 
         with st.form(key="ts_form", clear_on_submit=True):
-            ts_q = st.text_input(" ", placeholder="e.g., Performance of S&P 500 from Jan 2024 to Jun 2024", key="ts_question")
+            ts_q = st.text_input(
+                " ",
+                placeholder="e.g., Performance of S&P 500 from Jan 2024 to Jun 2024",
+                key="ts_question",
+            )
             ts_submit = st.form_submit_button("Parse & Plot")
 
         if ts_submit and ts_q.strip():
@@ -501,10 +551,7 @@ def render_timeseries_tab():
 # ============================================================
 
 KB_CSV_PATH = "knowledge_base.csv"
-
-# IMPORTANT: write cache into /tmp on Streamlit Cloud (repo dir may be read-only / not persistent)
-EMBED_CACHE_PATH = str(Path("/tmp") / "kb_embeds.npz")
-
+EMBED_CACHE_PATH = str(Path("/tmp") / "kb_embeds.npz")  # Streamlit Cloud-safe
 MODEL_NAME = "text-embedding-3-large"
 DEFAULT_THRESHOLD = 0.25
 DEFAULT_MARGIN = 0.05
@@ -513,14 +560,9 @@ OPTIONAL_COLS = ["id", "aliases", "tags"]
 
 
 def kb_get_embedding(texts: List[str], model: str = MODEL_NAME) -> np.ndarray:
-    """
-    Batch-embed a list of strings with OpenAI embeddings API.
-    Returns an (n, d) float32 numpy array (L2-normalized rows).
-    """
     if KB_OPENAI_CLIENT is None:
         raise RuntimeError(
-            "OpenAI client not initialized. Add OPENAI_API_KEY to Streamlit Secrets "
-            "(Manage app → Settings → Secrets)."
+            "OpenAI client not initialized. Add OPENAI_API_KEY to Streamlit Secrets."
         )
 
     out_vectors: List[List[float]] = []
@@ -651,24 +693,15 @@ def kb_search(
 
 
 def render_knowledge_tab():
-    st.header("💬 Knowledge-Locked Chatbot (Deterministic Retrieval)")
+    st.header("💬 Knowledge-Locked Q&A (Deterministic Retrieval)")
     st.write(
         "This bot **only** answers using the provided knowledge base. "
         "It returns stored answers verbatim (no text generation), so there are no hallucinations."
     )
 
-    client_ok = KB_OPENAI_CLIENT is not None
-    if client_ok:
-        st.success(
-            "OpenAI API key detected. Embeddings are used only for semantic search; "
-            "answers themselves are pre-written."
-        )
-    else:
-        st.error("OpenAI API key not detected for the Knowledge-Locked bot.")
-        st.info(
-            "On Streamlit Cloud: Manage app → Settings → Secrets, add:\n\n"
-            "OPENAI_API_KEY = \"sk-...\""
-        )
+    if KB_OPENAI_CLIENT is None:
+        st.error("OpenAI API key not configured for the Knowledge-Locked bot.")
+        st.info('Add Streamlit Secret:  OPENAI_API_KEY = "sk-..."')
         return
 
     left, right = st.columns([0.6, 0.4])
@@ -767,9 +800,9 @@ def render_knowledge_tab():
 - `answer`: the exact answer text to return verbatim.
 
 **Optional columns**
-- `id`: any identifier (number, slug, etc.).
-- `aliases`: pipe-separated synonyms (e.g. `data source|where do the data come from`).
-- `tags`: arbitrary tags (e.g. `meta,data`).
+- `id`: any identifier.
+- `aliases`: pipe-separated synonyms.
+- `tags`: arbitrary tags.
                 """
             )
 
@@ -802,14 +835,17 @@ def render_knowledge_tab():
                 if (not top) or (top["similarity"] < threshold):
                     answer_text = "_Not in my knowledge base. Try rephrasing or expand the KB._"
                     meta = None
+                    ambiguous = False
                 else:
                     if second is not None and (top["similarity"] - second["similarity"] < margin):
+                        ambiguous = True
                         answer_text = (
                             "_I found multiple close matches and I'm not sure which one you meant._\n\n"
                             "Please rephrase your question to be closer to one of these:"
                         )
-                        meta = {"ambiguous": True}
+                        meta = None
                     else:
+                        ambiguous = False
                         answer_text = str(top["answer"])
                         meta = {
                             "matched_question": top["question"],
@@ -821,22 +857,22 @@ def render_knowledge_tab():
                 answer_text = f"_Error running search: {type(e).__name__}: {e}_"
                 results = []
                 meta = None
-                margin = st.session_state.get("kb_margin", DEFAULT_MARGIN)
+                ambiguous = False
 
             with st.chat_message("assistant"):
                 st.markdown(answer_text)
 
-                if results:
-                    if meta and meta.get("ambiguous"):
-                        for r in results[:3]:
-                            st.write(f"- **{r['question']}** (similarity: {r['similarity']:.3f})")
-                    elif meta:
-                        with st.expander("Match details", expanded=False):
-                            st.write(f"**Matched Q:** {meta['matched_question']}")
-                            st.write(f"**KB ID:** {meta['id']}")
-                            st.write(f"**Similarity:** {meta['similarity']}")
-                            df_dbg = pd.DataFrame(results)[["rank", "similarity", "id", "question", "aliases", "tags"]]
-                            st.dataframe(df_dbg, use_container_width=True, hide_index=True)
+                if results and ambiguous:
+                    for r in results[:3]:
+                        st.write(f"- **{r['question']}** (similarity: {r['similarity']:.3f})")
+
+                if results and meta:
+                    with st.expander("Match details", expanded=False):
+                        st.write(f"**Matched Q:** {meta['matched_question']}")
+                        st.write(f"**KB ID:** {meta['id']}")
+                        st.write(f"**Similarity:** {meta['similarity']}")
+                        df_dbg = pd.DataFrame(results)[["rank", "similarity", "id", "question", "aliases", "tags"]]
+                        st.dataframe(df_dbg, use_container_width=True, hide_index=True)
 
             st.session_state["kb_messages"].append({"role": "assistant", "content": answer_text})
 
