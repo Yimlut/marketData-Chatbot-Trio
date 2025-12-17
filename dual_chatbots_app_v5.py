@@ -32,10 +32,8 @@ def _bootstrap_openai_env_from_streamlit_secrets() -> None:
     """
     try:
         if "OPENAI_API_KEY" in st.secrets and st.secrets["OPENAI_API_KEY"]:
-            # Only set if not already set (allows local env usage)
             os.environ.setdefault("OPENAI_API_KEY", st.secrets["OPENAI_API_KEY"])
     except Exception:
-        # st.secrets may not be available in some local contexts; ignore
         pass
 
 _bootstrap_openai_env_from_streamlit_secrets()
@@ -156,7 +154,6 @@ st.set_page_config(
     layout="wide",
 )
 
-# Inject tooltip CSS once
 st.markdown(TOOLTIP_CSS, unsafe_allow_html=True)
 
 
@@ -199,7 +196,6 @@ def render_market_monitor_tab():
 
     colL, colR = st.columns([0.6, 0.4])
 
-    # Right column: status, tickers tooltip, tips (with hover), manual calculator
     with colR:
         st.subheader("Status")
 
@@ -210,7 +206,6 @@ def render_market_monitor_tab():
             key="mm_workbook",
         )
 
-        # Load workbook + bot
         try:
             md, bot = get_mm(workbook)
         except Exception as e:
@@ -229,7 +224,6 @@ def render_market_monitor_tab():
         k2.metric("# Tickers", f"{len(md.df_prices.columns):,}")
         k3.metric("# Rows", f"{md.df_prices.shape[0]:,}")
 
-        # Hoverable "Tickers in data" (full scrollable list)
         tickers_in_prices = [str(t) for t in md.df_prices.columns]
         rows_html = []
         for t in tickers_in_prices:
@@ -238,9 +232,7 @@ def render_market_monitor_tab():
                 f"<div><code>{html_mod.escape(t)}</code> — "
                 f"{html_mod.escape(desc)}</div>"
             )
-        tickers_inner = (
-            "\n".join(rows_html) or "<div><em>No tickers loaded.</em></div>"
-        )
+        tickers_inner = "\n".join(rows_html) or "<div><em>No tickers loaded.</em></div>"
         tickers_tooltip_html = f"""
         <div class="mm-hover-wrapper">
           <span class="mm-hover-label">
@@ -279,9 +271,7 @@ def render_market_monitor_tab():
             "How has SHCOMP done YTD?",
             "Spread between US 10Y gov yield and swap rate.",
         ]
-        extra_items = "".join(
-            f"<li>{html_mod.escape(q)}</li>" for q in extra_tips_questions
-        )
+        extra_items = "".join(f"<li>{html_mod.escape(q)}</li>" for q in extra_tips_questions)
         tips_tooltip_html = f"""
         <div class="mm-hover-wrapper">
           <span class="mm-hover-label">More tips ▾</span>
@@ -296,7 +286,6 @@ def render_market_monitor_tab():
         st.markdown(tips_tooltip_html, unsafe_allow_html=True)
 
         st.markdown("---")
-
         render_manual_calculator(md, bot)
 
     with colL:
@@ -345,45 +334,35 @@ def render_market_monitor_tab():
 
                 if used_fn in {"price", "price_change", "return", "comparison"}:
                     if used_fn == "price":
-                        st.markdown(
-                            f"**Asset:** {params.get('asset_label') or params.get('asset')}"
-                        )
+                        st.markdown(f"**Asset:** {params.get('asset_label') or params.get('asset')}")
                         st.markdown(f"**Requested date:** {params.get('date')}")
                         st.markdown(
-                            f"**Price (actual date {result.get('date_actual')}):** "
-                            f"{result.get('price')}"
+                            f"**Price (actual date {result.get('date_actual')}):** {result.get('price')}"
                         )
 
                     elif used_fn == "price_change":
                         asset_label = params.get("asset_label") or params.get("asset")
                         st.markdown(f"**Asset:** {asset_label}")
-                        st.markdown(
-                            f"**Requested range:** {params.get('start_date')} → {params.get('end_date')}"
-                        )
+                        st.markdown(f"**Requested range:** {params.get('start_date')} → {params.get('end_date')}")
                         st.markdown(
                             f"**Prices (aligned to data):** "
                             f"{result.get('start_date_actual')} = {result.get('start_value')}, "
                             f"{result.get('end_date_actual')} = {result.get('end_value')}"
                         )
                         st.markdown(
-                            f"**Change:** {result.get('absolute_change')}  |  "
-                            f"**Pct:** {result.get('pct_change')}%"
+                            f"**Change:** {result.get('absolute_change')}  |  **Pct:** {result.get('pct_change')}%"
                         )
 
                     elif used_fn == "return":
                         asset_label = params.get("asset_label") or params.get("asset")
                         st.markdown(f"**Asset:** {asset_label}")
-                        st.markdown(
-                            f"**Requested range:** {params.get('start_date')} → {params.get('end_date')}"
-                        )
+                        st.markdown(f"**Requested range:** {params.get('start_date')} → {params.get('end_date')}")
                         st.markdown(
                             f"**Prices (aligned to data):** "
                             f"{result.get('start_date_actual')} = {result.get('start_value')}, "
                             f"{result.get('end_date_actual')} = {result.get('end_value')}"
                         )
-                        st.markdown(
-                            f"**Total Return:** {result.get('total_return_pct')}%"
-                        )
+                        st.markdown(f"**Total Return:** {result.get('total_return_pct')}%")
 
                     elif used_fn == "comparison":
                         a1_label = params.get("asset1_label") or params.get("asset1")
@@ -391,29 +370,20 @@ def render_market_monitor_tab():
                         st.markdown(f"**Asset 1:** {a1_label}")
                         st.markdown(f"**Asset 2:** {a2_label}")
                         st.markdown(
-                            f"**Date (requested → actual):** "
-                            f"{params.get('date')} → {result.get('date_actual')}"
+                            f"**Date (requested → actual):** {params.get('date')} → {result.get('date_actual')}"
                         )
                         st.markdown(
-                            f"**Prices:** {a1_label} = {result.get('asset1_value')}, "
-                            f"{a2_label} = {result.get('asset2_value')}"
+                            f"**Prices:** {a1_label} = {result.get('asset1_value')}, {a2_label} = {result.get('asset2_value')}"
                         )
-                        st.markdown(
-                            f"**Spread (Asset 1 − Asset 2):** {result.get('spread')}"
-                        )
+                        st.markdown(f"**Spread (Asset 1 − Asset 2):** {result.get('spread')}")
 
                     st.caption(resp.get("message"))
                 else:
                     st.warning(resp.get("message", "Unable to answer."))
 
                 if show_debug:
-                    with st.expander(
-                        "Rewriter / Router / Params / Result (debug)", expanded=False
-                    ):
-                        st.code(
-                            json.dumps(resp, indent=2, ensure_ascii=False),
-                            language="json",
-                        )
+                    with st.expander("Rewriter / Router / Params / Result (debug)", expanded=False):
+                        st.code(json.dumps(resp, indent=2, ensure_ascii=False), language="json")
 
     st.markdown("---")
 
@@ -431,21 +401,9 @@ def render_timeseries_tab():
 
     with right:
         st.subheader("Data")
-        ts_file = st.text_input(
-            "Prices file (CSV/XLSX)",
-            value="Market Monitor - blp.xlsx",
-            key="ts_file",
-        )
-        ts_sheet = st.text_input(
-            "Excel sheet (optional)",
-            value="BBG Data",
-            key="ts_sheet",
-        )
-        map_path = st.text_input(
-            "TickerNameMapping.csv path",
-            value="TickerNameMapping.csv",
-            key="ts_map",
-        )
+        ts_file = st.text_input("Prices file (CSV/XLSX)", value="Market Monitor - blp.xlsx", key="ts_file")
+        ts_sheet = st.text_input("Excel sheet (optional)", value="BBG Data", key="ts_sheet")
+        map_path = st.text_input("TickerNameMapping.csv path", value="TickerNameMapping.csv", key="ts_map")
 
         df = None
         mapping_df = None
@@ -468,11 +426,7 @@ def render_timeseries_tab():
             st.session_state["ts_history"] = []
 
         with st.form(key="ts_form", clear_on_submit=True):
-            ts_q = st.text_input(
-                " ",
-                placeholder="e.g., Performance of S&P 500 from Jan 2024 to Jun 2024",
-                key="ts_question",
-            )
+            ts_q = st.text_input(" ", placeholder="e.g., Performance of S&P 500 from Jan 2024 to Jun 2024", key="ts_question")
             ts_submit = st.form_submit_button("Parse & Plot")
 
         if ts_submit and ts_q.strip():
@@ -498,6 +452,7 @@ def render_timeseries_tab():
                 )
             except Exception as e:
                 err = f"{type(e).__name__}: {e}"
+
             st.session_state["ts_history"].append(
                 {"q": ts_q.strip(), "parsed": parsed, "result": result, "error": err}
             )
@@ -511,14 +466,11 @@ def render_timeseries_tab():
 
                 parsed = item["parsed"]
                 result = item["result"]
+
                 if parsed:
-                    st.markdown(
-                        f"**Asset:** {parsed.get('asset_name')} "
-                        f"(`{parsed.get('asset')}`)"
-                    )
-                    st.markdown(
-                        f"**Range:** {parsed.get('start')} → {parsed.get('end')}"
-                    )
+                    st.markdown(f"**Asset:** {parsed.get('asset_name')} (`{parsed.get('asset')}`)")
+                    st.markdown(f"**Range:** {parsed.get('start')} → {parsed.get('end')}")
+
                 if result:
                     s: PerfStats = result["stats"]
                     k1, k2, k3, k4, k5, k6 = st.columns(6)
@@ -539,11 +491,7 @@ def render_timeseries_tab():
                         grid = st.columns(2)
                         for j, pth in enumerate(imgs):
                             with grid[j % 2]:
-                                st.image(
-                                    str(pth),
-                                    use_container_width=True,
-                                    caption=pth.name,
-                                )
+                                st.image(str(pth), use_container_width=True, caption=pth.name)
                     else:
                         st.info("No charts were generated.")
 
@@ -553,7 +501,10 @@ def render_timeseries_tab():
 # ============================================================
 
 KB_CSV_PATH = "knowledge_base.csv"
-EMBED_CACHE_PATH = "kb_embeds.npz"
+
+# IMPORTANT: write cache into /tmp on Streamlit Cloud (repo dir may be read-only / not persistent)
+EMBED_CACHE_PATH = str(Path("/tmp") / "kb_embeds.npz")
+
 MODEL_NAME = "text-embedding-3-large"
 DEFAULT_THRESHOLD = 0.25
 DEFAULT_MARGIN = 0.05
@@ -562,6 +513,10 @@ OPTIONAL_COLS = ["id", "aliases", "tags"]
 
 
 def kb_get_embedding(texts: List[str], model: str = MODEL_NAME) -> np.ndarray:
+    """
+    Batch-embed a list of strings with OpenAI embeddings API.
+    Returns an (n, d) float32 numpy array (L2-normalized rows).
+    """
     if KB_OPENAI_CLIENT is None:
         raise RuntimeError(
             "OpenAI client not initialized. Add OPENAI_API_KEY to Streamlit Secrets "
@@ -574,15 +529,320 @@ def kb_get_embedding(texts: List[str], model: str = MODEL_NAME) -> np.ndarray:
         batch = texts[i:i + BATCH]
         resp = KB_OPENAI_CLIENT.embeddings.create(model=model, input=batch)
         out_vectors.extend([d.embedding for d in resp.data])
+
     arr = np.array(out_vectors, dtype=np.float32)
     norms = np.linalg.norm(arr, axis=1, keepdims=True) + 1e-12
     return arr / norms
 
 
-# (rest of your KB code unchanged)
-# ... keep everything below exactly as you had it ...
+def kb_ensure_sample_kb():
+    if not os.path.exists(KB_CSV_PATH):
+        df = pd.DataFrame([
+            {
+                "id": 1,
+                "question": "Where are the market data from?",
+                "answer": "All market data in this tool are sourced from the Excel workbook you configured (e.g. Bloomberg exports).",
+                "aliases": "data source|where do the data come from|origin of data",
+                "tags": "meta,data",
+            },
+            {
+                "id": 2,
+                "question": "How often is the market data updated?",
+                "answer": "The data are updated whenever you refresh or replace the underlying Excel file. There is no automatic real-time feed.",
+                "aliases": "update frequency|refresh frequency|how often updated",
+                "tags": "meta,data",
+            },
+        ])
+        df.to_csv(KB_CSV_PATH, index=False)
+
+
+def kb_load_kb(path: str = KB_CSV_PATH) -> pd.DataFrame:
+    if not os.path.exists(path):
+        kb_ensure_sample_kb()
+    df = pd.read_csv(path)
+    df.columns = [c.strip().lower() for c in df.columns]
+    for col in REQUIRED_COLS:
+        if col not in df.columns:
+            raise ValueError(f"Missing required column '{col}' in {path}")
+    for col in OPTIONAL_COLS:
+        if col not in df.columns:
+            df[col] = ""
+    df = df.fillna({"aliases": "", "tags": "", "id": ""})
+    return df
+
+
+def kb_make_search_text(row: pd.Series, include_answer_in_index: bool) -> str:
+    pieces = [
+        str(row.get("question", "")),
+        str(row.get("aliases", "")),
+        str(row.get("tags", "")),
+    ]
+    if include_answer_in_index:
+        pieces.append(str(row.get("answer", "")))
+    joined = " ".join(pieces).replace("|", " ")
+    return joined.strip()
+
+
+def kb_fingerprint(df: pd.DataFrame, include_answer_in_index: bool) -> str:
+    proj_cols = ["id", "question", "answer", "aliases", "tags"]
+    tmp = df[proj_cols].copy()
+    tmp["__indexed"] = df.apply(lambda r: kb_make_search_text(r, include_answer_in_index), axis=1)
+    payload = tmp.to_json(orient="records", force_ascii=False)
+    return hashlib.sha256((payload + f"|include_answer={include_answer_in_index}").encode("utf-8")).hexdigest()
+
+
+def kb_build_or_load_index(
+    df: pd.DataFrame,
+    include_answer_in_index: bool = False,
+) -> Tuple[NearestNeighbors, np.ndarray, pd.DataFrame]:
+    df_aug = df.copy()
+    df_aug["search_text"] = df_aug.apply(lambda r: kb_make_search_text(r, include_answer_in_index), axis=1)
+    fp = kb_fingerprint(df_aug, include_answer_in_index)
+
+    vectors: np.ndarray
+    if os.path.exists(EMBED_CACHE_PATH):
+        try:
+            cache = np.load(EMBED_CACHE_PATH, allow_pickle=True)
+            if cache["fingerprint"].item() == fp:
+                vectors = cache["vectors"].astype(np.float32)
+            else:
+                raise ValueError("Fingerprint mismatch; will rebuild.")
+        except Exception:
+            vectors = kb_get_embedding(df_aug["search_text"].tolist())
+            np.savez(EMBED_CACHE_PATH, vectors=vectors, fingerprint=np.array(fp, dtype=object))
+    else:
+        vectors = kb_get_embedding(df_aug["search_text"].tolist())
+        np.savez(EMBED_CACHE_PATH, vectors=vectors, fingerprint=np.array(fp, dtype=object))
+
+    knn = NearestNeighbors(n_neighbors=min(10, len(df_aug)), algorithm="auto", metric="cosine")
+    knn.fit(vectors)
+    return knn, vectors, df_aug
+
+
+def kb_search(
+    df_aug: pd.DataFrame,
+    knn: NearestNeighbors,
+    matrix: np.ndarray,
+    query: str,
+    top_k: int = 5,
+):
+    q_vec = kb_get_embedding([query])[0]
+    distances, indices = knn.kneighbors(q_vec.reshape(1, -1), n_neighbors=min(top_k, len(df_aug)))
+    distances = distances[0]
+    indices = indices[0]
+    sims = 1.0 - distances
+
+    results = []
+    for rank, (idx, sim) in enumerate(zip(indices, sims), start=1):
+        row = df_aug.iloc[idx]
+        results.append(
+            {
+                "rank": rank,
+                "index": int(idx),
+                "similarity": float(sim),
+                "id": row.get("id", ""),
+                "question": row["question"],
+                "answer": row["answer"],
+                "aliases": row.get("aliases", ""),
+                "tags": row.get("tags", ""),
+            }
+        )
+    return results
+
+
+def render_knowledge_tab():
+    st.header("💬 Knowledge-Locked Chatbot (Deterministic Retrieval)")
+    st.write(
+        "This bot **only** answers using the provided knowledge base. "
+        "It returns stored answers verbatim (no text generation), so there are no hallucinations."
+    )
+
+    client_ok = KB_OPENAI_CLIENT is not None
+    if client_ok:
+        st.success(
+            "OpenAI API key detected. Embeddings are used only for semantic search; "
+            "answers themselves are pre-written."
+        )
+    else:
+        st.error("OpenAI API key not detected for the Knowledge-Locked bot.")
+        st.info(
+            "On Streamlit Cloud: Manage app → Settings → Secrets, add:\n\n"
+            "OPENAI_API_KEY = \"sk-...\""
+        )
+        return
+
+    left, right = st.columns([0.6, 0.4])
+
+    with right:
+        st.subheader("Knowledge Base & Index")
+
+        upload_file = st.file_uploader(
+            "Upload a knowledge_base.csv",
+            type=["csv"],
+            accept_multiple_files=False,
+            key="kb_upload",
+        )
+
+        include_ans_default = st.session_state.get("kb_include_ans", False)
+        threshold_default = st.session_state.get("kb_threshold", DEFAULT_THRESHOLD)
+        margin_default = st.session_state.get("kb_margin", DEFAULT_MARGIN)
+
+        include_ans = st.checkbox(
+            "Also index the 'answer' text",
+            value=include_ans_default,
+            help="If on, semantic search can match words in answers as well as questions / aliases.",
+            key="kb_include_ans_cb",
+        )
+        threshold = st.slider(
+            "Similarity threshold for a match",
+            0.0,
+            1.0,
+            float(threshold_default),
+            0.01,
+            help="Below this, the bot will say 'Not in my knowledge base'.",
+            key="kb_threshold_slider",
+        )
+        margin = st.slider(
+            "Ambiguity margin (top1 - top2)",
+            0.0,
+            0.50,
+            float(margin_default),
+            0.01,
+            help="If top match isn't better than 2nd by at least this margin, treat as ambiguous.",
+            key="kb_margin_slider",
+        )
+
+        rebuild_clicked = st.button("🔄 Rebuild index", key="kb_rebuild_btn")
+
+        if upload_file is not None:
+            try:
+                df_kb = pd.read_csv(upload_file)
+                df_kb.columns = [c.strip().lower() for c in df_kb.columns]
+                kb_source = f"uploaded:{upload_file.name}"
+            except Exception as e:
+                st.error(f"Failed to read uploaded KB: {e}")
+                return
+        else:
+            try:
+                df_kb = kb_load_kb(KB_CSV_PATH)
+                kb_source = f"file:{KB_CSV_PATH}"
+            except Exception as e:
+                st.error(f"Failed to load KB: {e}")
+                return
+
+        st.caption(f"KB rows: {df_kb.shape[0]}")
+
+        need_rebuild = (
+            "kb_knn" not in st.session_state
+            or rebuild_clicked
+            or st.session_state.get("kb_include_ans") != include_ans
+            or st.session_state.get("kb_source") != kb_source
+        )
+
+        if need_rebuild:
+            st.info("Building index…")
+            try:
+                knn, mat, df_aug = kb_build_or_load_index(df_kb, include_answer_in_index=include_ans)
+            except Exception as e:
+                st.error(f"Failed to build index: {e}")
+                return
+            st.session_state["kb_knn"] = knn
+            st.session_state["kb_mat"] = mat
+            st.session_state["kb_df_aug"] = df_aug
+            st.session_state["kb_source"] = kb_source
+            st.session_state["kb_include_ans"] = include_ans
+        else:
+            knn = st.session_state["kb_knn"]
+            mat = st.session_state["kb_mat"]
+            df_aug = st.session_state["kb_df_aug"]
+
+        st.session_state["kb_threshold"] = float(threshold)
+        st.session_state["kb_margin"] = float(margin)
+
+        with st.expander("📘 How to structure knowledge_base.csv", expanded=False):
+            st.markdown(
+                """
+**Required columns**
+- `question`: canonical question text.
+- `answer`: the exact answer text to return verbatim.
+
+**Optional columns**
+- `id`: any identifier (number, slug, etc.).
+- `aliases`: pipe-separated synonyms (e.g. `data source|where do the data come from`).
+- `tags`: arbitrary tags (e.g. `meta,data`).
+                """
+            )
+
+    with left:
+        st.subheader("Ask about the data / methodology")
+
+        if "kb_messages" not in st.session_state:
+            st.session_state["kb_messages"] = []
+
+        if st.button("Erase all", key="kb_erase_btn"):
+            st.session_state["kb_messages"] = []
+
+        for m in st.session_state["kb_messages"]:
+            with st.chat_message(m["role"]):
+                st.markdown(m["content"])
+
+        query = st.chat_input("Type your question…", key="kb_chat_input")
+        if query:
+            st.session_state["kb_messages"].append({"role": "user", "content": query})
+            with st.chat_message("user"):
+                st.markdown(query)
+
+            try:
+                results = kb_search(df_aug, knn, mat, query, top_k=5)
+                top = results[0] if results else None
+                second = results[1] if results and len(results) > 1 else None
+                threshold = st.session_state.get("kb_threshold", DEFAULT_THRESHOLD)
+                margin = st.session_state.get("kb_margin", DEFAULT_MARGIN)
+
+                if (not top) or (top["similarity"] < threshold):
+                    answer_text = "_Not in my knowledge base. Try rephrasing or expand the KB._"
+                    meta = None
+                else:
+                    if second is not None and (top["similarity"] - second["similarity"] < margin):
+                        answer_text = (
+                            "_I found multiple close matches and I'm not sure which one you meant._\n\n"
+                            "Please rephrase your question to be closer to one of these:"
+                        )
+                        meta = {"ambiguous": True}
+                    else:
+                        answer_text = str(top["answer"])
+                        meta = {
+                            "matched_question": top["question"],
+                            "similarity": round(top["similarity"], 3),
+                            "id": top["id"],
+                        }
+
+            except Exception as e:
+                answer_text = f"_Error running search: {type(e).__name__}: {e}_"
+                results = []
+                meta = None
+                margin = st.session_state.get("kb_margin", DEFAULT_MARGIN)
+
+            with st.chat_message("assistant"):
+                st.markdown(answer_text)
+
+                if results:
+                    if meta and meta.get("ambiguous"):
+                        for r in results[:3]:
+                            st.write(f"- **{r['question']}** (similarity: {r['similarity']:.3f})")
+                    elif meta:
+                        with st.expander("Match details", expanded=False):
+                            st.write(f"**Matched Q:** {meta['matched_question']}")
+                            st.write(f"**KB ID:** {meta['id']}")
+                            st.write(f"**Similarity:** {meta['similarity']}")
+                            df_dbg = pd.DataFrame(results)[["rank", "similarity", "id", "question", "aliases", "tags"]]
+                            st.dataframe(df_dbg, use_container_width=True, hide_index=True)
+
+            st.session_state["kb_messages"].append({"role": "assistant", "content": answer_text})
+
 
 # ---------- Main layout ----------
+
 tab1, tab2, tab3 = st.tabs(
     [
         "Market Monitor Chatbot",
