@@ -51,7 +51,49 @@ SHEET_TICKERS = "Tickers"
 DEFAULT_REASONING_MODEL = os.environ.get("OPENAI_REASONING_MODEL", "gpt-4o-mini")
 DEFAULT_EMBED_MODEL = os.environ.get("OPENAI_EMBED_MODEL", "text-embedding-3-large")
 
-client = OpenAI()
+
+def _get_openai_key() -> str:
+    """
+    Priority:
+      1) Environment variable OPENAI_API_KEY
+      2) Streamlit secrets OPENAI_API_KEY (Streamlit Community Cloud)
+    Returns "" if not found.
+    """
+    k = os.getenv("OPENAI_API_KEY", "").strip()
+    if k:
+        return k
+    try:
+        import streamlit as st  # type: ignore
+        sk = str(st.secrets.get("OPENAI_API_KEY", "")).strip()
+        if sk:
+            return sk
+    except Exception:
+        pass
+    return ""
+
+def _get_openai_client() -> OpenAI:
+    """
+    Create the OpenAI client with an explicit key (no reliance on implicit env at import time).
+    """
+    api_key = _get_openai_key()
+    if not api_key:
+        raise RuntimeError(
+            "OPENAI_API_KEY not found. "
+            "On Streamlit Cloud: Manage app → Settings → Secrets → add OPENAI_API_KEY. "
+            "Locally: set env var OPENAI_API_KEY."
+        )
+    return OpenAI(api_key=api_key)
+
+# Global client (created once when module loads; now safe because it has explicit key lookup)
+_client: OpenAI | None = None
+
+def get_client() -> OpenAI:
+    global _client
+    if _client is None:
+        _client = _get_openai_client()
+    return _client
+
+
 
 # ----------------------- Utilities ---------------------------
 
@@ -356,7 +398,7 @@ class AssetResolver:
             name = name_map.get(t, t)
             items.append(AssetIndexItem(ticker=t, name=name, text=_enrich_text(t, name)))
         if items:
-            embeds = client.embeddings.create(model=self.embed_model, input=[x.text for x in items])
+            embeds = get_client().embeddings.create(model=self.embed_model, input=[x.text for x in items])
             for item, v in zip(items, embeds.data):
                 item.embedding = v.embedding
         return items
@@ -496,7 +538,7 @@ class AssetResolver:
         mention_tokens = self._mention_tokens(mention)
 
         # Embedding similarity to ALL items
-        q_embed = client.embeddings.create(model=self.embed_model, input=[mention]).data[0].embedding
+        q_embed = get_client().embeddings.create(model=self.embed_model, input=[mention]).data[0].embedding
         sim_map: Dict[str, float] = {}
         for it in self.items:
             if it.embedding is None:
@@ -694,7 +736,7 @@ class AssetResolver:
         user = f"Mention: {mention}\nCandidates: {json.dumps(opts, ensure_ascii=False)}"
         debug_entry["tie_breaker_prompt"] = {"system": system, "user": user}
 
-        resp = client.chat.completions.create(
+        resp = get_client().chat.completions.create(
             model=DEFAULT_REASONING_MODEL, temperature=0,
             response_format={"type": "json_object"},
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
@@ -884,7 +926,7 @@ class QueryRewriter:
           2) on the first pass's final_query (normalized English)
         """
         sys = REWRITER_SYSTEM_PROMPT.format(reference_date=ref)
-        resp = client.chat.completions.create(
+        resp = get_client().chat.completions.create(
             model=self.model,
             temperature=0,
             response_format={"type": "json_object"},
@@ -1015,7 +1057,7 @@ class RouterAgent:
             "downstream logic aligns to the nearest available date in the dataset.\n"
             "Respond ONLY JSON (json): {function, confidence, reason}."
         )
-        resp = client.chat.completions.create(
+        resp = get_client().chat.completions.create(
             model=self.model, temperature=0, response_format={"type": "json_object"},
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user_prompt}],
         )
@@ -1064,7 +1106,7 @@ class BaseParamAgent:
                 "Ensure start_date <= end_date. Return explicit dates (unchanged if out of range). "
                 "Respond ONLY JSON (json): {start_date:'YYYY-MM-DD', end_date:'YYYY-MM-DD', raw_range_text:<string or null>}."
             )
-        resp = client.chat.completions.create(
+        resp = get_client().chat.completions.create(
             model=self.model, temperature=0, response_format={"type": "json_object"},
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user_prompt}],
         )
@@ -1100,7 +1142,7 @@ class PriceParamAgent(BaseParamAgent):
                 "Return ONLY JSON (json): {asset_mention: <string>, date: 'YYYY-MM-DD'}.\n"
                 "If fixed income, include country/asset class/rating/tenor mentioned by the user."
             )
-            resp = client.chat.completions.create(
+            resp = get_client().chat.completions.create(
                 model=self.model, temperature=0, response_format={"type": "json_object"},
                 messages=[{"role": "system", "content": system}, {"role": "user", "content": user_prompt}],
             )
@@ -1135,7 +1177,7 @@ class PriceChangeParamAgent(BaseParamAgent):
                 "Return ONLY JSON (json): {asset_mention: <string>}.\n"
                 "If fixed income, include country/asset class/rating/tenor mentioned by the user."
             )
-            resp = client.chat.completions.create(
+            resp = get_client().chat.completions.create(
                 model=self.model, temperature=0, response_format={"type": "json_object"},
                 messages=[{"role": "system", "content": system}, {"role": "user", "content": user_prompt}],
             )
@@ -1183,7 +1225,7 @@ class ReturnParamAgent(BaseParamAgent):
                 "Return ONLY JSON (json): {asset_mention: <string>}.\n"
                 "If fixed income, include country/asset class/rating/tenor mentioned by the user."
             )
-            resp = client.chat.completions.create(
+            resp = get_client().chat.completions.create(
                 model=self.model, temperature=0, response_format={"type": "json_object"},
                 messages=[{"role": "system", "content": system}, {"role": "user", "content": user_prompt}],
             )
@@ -1232,7 +1274,7 @@ class ComparisonParamAgent(BaseParamAgent):
                 "PROPAGATE it to the second mention. If the second has a DIFFERENT explicit qualifier, keep it.\n"
                 "Return ONLY JSON (json): {asset1_mention: <string>, asset2_mention: <string>}."
             )
-            resp = client.chat.completions.create(
+            resp = get_client().chat.completions.create(
                 model=self.model, temperature=0, response_format={"type": "json_object"},
                 messages=[{"role": "system", "content": system}, {"role": "user", "content": user_prompt}],
             )

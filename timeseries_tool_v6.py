@@ -39,6 +39,34 @@ plt.rcParams["axes.spines.right"] = False
 plt.rcParams["font.size"] = 10
 
 
+# ===================== OpenAI Key Helper (NEW) =====================
+
+def _get_openai_key() -> str:
+    """
+    Return OpenAI API key if available.
+
+    Priority:
+      1) Environment variable OPENAI_API_KEY (local dev, CI, or if wrapper sets it)
+      2) Streamlit secrets OPENAI_API_KEY (Streamlit Community Cloud)
+
+    Returns "" if not found.
+    """
+    k = os.getenv("OPENAI_API_KEY", "").strip()
+    if k:
+        return k
+
+    # Optional Streamlit secrets fallback (won't break CLI if streamlit isn't installed)
+    try:
+        import streamlit as st  # type: ignore
+        sk = str(st.secrets.get("OPENAI_API_KEY", "")).strip()
+        if sk:
+            return sk
+    except Exception:
+        pass
+
+    return ""
+
+
 # ---------- Data Loading ----------
 def load_prices(file: str | Path, sheet: Optional[str] = None) -> pd.DataFrame:
     file = Path(file)
@@ -301,13 +329,11 @@ def _parse_dates_fallback(q: str) -> Tuple[Optional[str], Optional[str]]:
     """
     ql = q.lower()
 
-    # year only (beginning ... end of <year>)
     m = re.search(r"(20\d{2}|19\d{2})", ql)
     if m and ("begin" in ql or "start" in ql) and ("end" in ql or "through" in ql or "to " in ql):
         y = int(m.group(1))
         return f"{y}-01-01", f"{y}-12-31"
 
-    # quarters like "Q2 2025" or "second quarter 2025"
     m = re.search(r"(q[1-4]|first quarter|second quarter|third quarter|fourth quarter)\s*(?:of|,| )?\s*(20\d{2}|19\d{2})", ql)
     if m:
         qmap = {"q1": 1, "first quarter": 1, "q2": 2, "second quarter": 2,
@@ -318,7 +344,6 @@ def _parse_dates_fallback(q: str) -> Tuple[Optional[str], Optional[str]]:
         end = _quarter_end(y, qnum)
         return start.isoformat(), end.isoformat()
 
-    # explicit "from ... to ..."
     m = re.search(
         r"from\s+(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}/\d{1,2}/\d{4})\s+(?:to|through|until)\s+(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}/\d{1,2}/\d{4})",
         ql,
@@ -327,9 +352,9 @@ def _parse_dates_fallback(q: str) -> Tuple[Optional[str], Optional[str]]:
         def norm(s):
             s = s.replace("/", "-")
             parts = [int(p) for p in s.split("-")]
-            if parts[0] > 31:   # assume YYYY-MM-DD
+            if parts[0] > 31:
                 y, mth, d = parts
-            else:               # assume MM-DD-YYYY
+            else:
                 mth, d, y = parts
             return f"{y:04d}-{mth:02d}-{d:02d}"
         return norm(m.group(1)), norm(m.group(2))
@@ -346,7 +371,7 @@ def llm_extract(query: str, mapping_df: pd.DataFrame, model: str = "gpt-4o-mini"
     """
     allowed_assets: List[str] = mapping_df["Name"].dropna().astype(str).tolist()
 
-    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    api_key = _get_openai_key()
     if api_key:
         try:
             from openai import OpenAI
@@ -375,7 +400,6 @@ def llm_extract(query: str, mapping_df: pd.DataFrame, model: str = "gpt-4o-mini"
             import json
             data = json.loads(resp.choices[0].message.content)
 
-            # normalize asset name
             asset_name = data.get("asset_name")
             low_map = {a.lower(): a for a in allowed_assets}
             if asset_name and asset_name.lower() in low_map:
@@ -469,7 +493,6 @@ def run_streamlit_app():
                 except Exception as e:
                     st.error(f"Failed to load: {e}")
 
-        # ----- Ticker mapping file (unchanged) -----
         st.header("1b) Ticker mapping")
         map_src = st.radio("Mapping source", ["Upload mapping CSV", "Path on disk"], horizontal=True)
         mapping_df = None
@@ -499,7 +522,6 @@ def run_streamlit_app():
             st.caption("Preview (first 5 rows):")
             st.dataframe(df.head())
 
-        # ---------- Natural language ----------
         st.header("2) Natural language")
         question = st.text_area(
             "Ask a question (e.g., 'What's the performance of SP500 from beginning of 2025 to the end of the second quarter?')",
@@ -507,16 +529,13 @@ def run_streamlit_app():
         )
         parse_clicked = st.button("Parse with AI ✨")
 
-        # ---------- Parameters (render AFTER we compute desired defaults) ----------
         st.header("3) Parameters (you can edit after parsing)")
 
-        # Keep pending values that will be used as defaults on the next render
         if "pending_asset" not in st.session_state:
             st.session_state["pending_asset"] = None
         if "pending_dates" not in st.session_state:
             st.session_state["pending_dates"] = None
 
-        # If parse button pressed, fill pending values and rerun immediately
         if parse_clicked:
             if mapping_df is None:
                 st.warning("Please provide TickerNameMapping.csv before parsing.")
@@ -525,7 +544,6 @@ def run_streamlit_app():
                 with st.expander("Parsed details"):
                     st.json(parsed)
 
-                # Save as pending (do NOT touch widget keys directly)
                 st.session_state["pending_asset"] = parsed.get("asset")
                 try:
                     s = pd.to_datetime(parsed.get("start")).date() if parsed.get("start") else None
@@ -534,18 +552,14 @@ def run_streamlit_app():
                 except Exception:
                     st.session_state["pending_dates"] = None
 
-                # Rerun so widgets can pick up the new defaults
                 st.rerun()
 
-        # Build widget defaults
         asset_cols = [c for c in df.columns if c != "Date"] if df is not None else []
-        # default asset index
         if st.session_state["pending_asset"] in asset_cols:
             default_asset_index = asset_cols.index(st.session_state["pending_asset"])
         else:
             default_asset_index = 0 if asset_cols else None
 
-        # default date range
         if df is not None:
             min_d, max_d = df.index.min().date(), df.index.max().date()
         else:
@@ -555,7 +569,6 @@ def run_streamlit_app():
         else:
             dr_default = (min_d, max_d)
 
-        # Now render widgets with those defaults
         asset = st.selectbox(
             "Asset column (Bloomberg ticker from your price file)",
             options=asset_cols,
@@ -573,7 +586,6 @@ def run_streamlit_app():
     start, end = [pd.to_datetime(d) for d in st.session_state["date_range"]]
     result = analyze_asset(df, st.session_state["asset_select"], start=start, end=end, rf=rf)
 
-    # ---- rest of the page unchanged ----
     s: PerfStats = result["stats"]
     k1, k2, k3, k4, k5, k6 = st.columns(6)
     k1.metric("CAGR", f"{s.cagr*100:,.2f}%")
