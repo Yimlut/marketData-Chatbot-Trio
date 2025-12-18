@@ -8,6 +8,7 @@
 #  - auto-refresh cached workbook/prices/mapping when underlying files change (mtime stamp)
 #  - add "Reload data" buttons for Market Monitor + Time-Series
 #  - KB cache writes to /tmp for Streamlit Cloud safety
+#  - Add displaying closest matches if cannot find an asset that meets the creterier
 
 from __future__ import annotations
 
@@ -416,7 +417,33 @@ def render_market_monitor_tab():
 
                     st.caption(resp.get("message"))
                 else:
+                    # Show the main message
                     st.warning(resp.get("message", "Unable to answer."))
+
+                    # NEW: if the backend returned suggestions, display them
+                    suggestions = resp.get("suggestions") or []
+                    if suggestions:
+                        st.markdown("**Closest matches in this workbook:**")
+
+                        # Pretty bullets (good UX)
+                        for s in suggestions[:10]:
+                            t = s.get("ticker", "")
+                            n = s.get("name", "")
+                            sc = s.get("score", None)
+                            if sc is not None:
+                                st.write(f"- `{t}` — {n} (score: {sc})")
+                            else:
+                                st.write(f"- `{t}` — {n}")
+
+                        # Optional: show full table in an expander
+                        with st.expander("Show as table", expanded=False):
+                            df_sug = pd.DataFrame(suggestions)
+                            # keep consistent columns if present
+                            cols = [c for c in ["ticker", "name", "score"] if c in df_sug.columns]
+                            if cols:
+                                df_sug = df_sug[cols]
+                            st.dataframe(df_sug, use_container_width=True, hide_index=True)
+
 
                 if show_debug:
                     with st.expander("Rewriter / Router / Params / Result (debug)", expanded=False):
