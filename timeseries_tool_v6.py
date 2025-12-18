@@ -12,6 +12,10 @@ New (AI):
 - Load TickerNameMapping.csv (first col = friendly asset Name, second col = Bloomberg Ticker)
 - Natural language box → uses OpenAI API to extract start, end, asset (by Name)
 - Auto-fills the UI parameters from the parsed result (you can edit before running)
+
+Fix (anchored dates):
+- Natural language time ranges like "past 5 years" are now anchored to a provided reference_date
+  (ideally the last date in the dataset), instead of the model’s implicit notion of “today”.
 """
 from __future__ import annotations
 
@@ -39,7 +43,7 @@ plt.rcParams["axes.spines.right"] = False
 plt.rcParams["font.size"] = 10
 
 
-# ===================== OpenAI Key Helper (NEW) =====================
+# ===================== OpenAI Key Helper =====================
 
 def _get_openai_key() -> str:
     """
@@ -55,7 +59,6 @@ def _get_openai_key() -> str:
     if k:
         return k
 
-    # Optional Streamlit secrets fallback (won't break CLI if streamlit isn't installed)
     try:
         import streamlit as st  # type: ignore
         sk = str(st.secrets.get("OPENAI_API_KEY", "")).strip()
@@ -155,7 +158,6 @@ def compute_stats(prices: pd.Series, rf: float = 0.0) -> PerfStats:
     sharpe = _sharpe(ret, rf=rf)
     max_dd, max_dd_len = _max_drawdown(cum)
     calmar = (cagr / abs(max_dd)) if (max_dd and max_dd != 0 and not math.isnan(cagr)) else np.nan
-    # Exclude exactly-zero returns (e.g., weekends/holidays in 7-day calendars)
     non_zero = ret[ret != 0]
     win_rate = float((non_zero > 0).mean()) if len(non_zero) else float('nan')
     skew = float(ret.skew())
@@ -301,7 +303,7 @@ def analyze_asset(df: pd.DataFrame, asset: str, start: Optional[str] = None, end
     }
 
 
-# ===================== AI HELPERS (NEW) =====================
+# ===================== AI HELPERS =====================
 
 def load_mapping(mapping_path: str | Path) -> pd.DataFrame:
     """Load TickerNameMapping.* (CSV or XLSX). First col = Name, second col = Ticker."""
@@ -322,18 +324,31 @@ def _quarter_end(y: int, q: int) -> date:
     return date(y, m, monthrange(y, m)[1])
 
 
-def _parse_dates_fallback(q: str) -> Tuple[Optional[str], Optional[str]]:
+def _parse_dates_fallback(q: str, reference_date: str) -> Tuple[Optional[str], Optional[str]]:
     """
     Lightweight rules to catch common phrases if LLM is unavailable.
     Returns ISO strings (YYYY-MM-DD) or (None, None).
-    """
-    ql = q.lower()
 
+    Now anchored to a reference_date (treated as "today").
+    """
+    ql = (q or "").lower().strip()
+    ref = pd.to_datetime(reference_date).date()
+
+    # past N years
+    m = re.search(r"(past|last)\s+(\d{1,2})\s+years?", ql)
+    if m:
+        n = int(m.group(2))
+        end = ref
+        start = date(ref.year - n, ref.month, min(ref.day, monthrange(ref.year - n, ref.month)[1]))
+        return start.isoformat(), end.isoformat()
+
+    # year only (beginning ... end of <year>)
     m = re.search(r"(20\d{2}|19\d{2})", ql)
     if m and ("begin" in ql or "start" in ql) and ("end" in ql or "through" in ql or "to " in ql):
         y = int(m.group(1))
         return f"{y}-01-01", f"{y}-12-31"
 
+    # quarters like "Q2 2025" or "second quarter 2025"
     m = re.search(r"(q[1-4]|first quarter|second quarter|third quarter|fourth quarter)\s*(?:of|,| )?\s*(20\d{2}|19\d{2})", ql)
     if m:
         qmap = {"q1": 1, "first quarter": 1, "q2": 2, "second quarter": 2,
@@ -344,6 +359,7 @@ def _parse_dates_fallback(q: str) -> Tuple[Optional[str], Optional[str]]:
         end = _quarter_end(y, qnum)
         return start.isoformat(), end.isoformat()
 
+    # explicit "from ... to ..."
     m = re.search(
         r"from\s+(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}/\d{1,2}/\d{4})\s+(?:to|through|until)\s+(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}/\d{1,2}/\d{4})",
         ql,
@@ -352,9 +368,9 @@ def _parse_dates_fallback(q: str) -> Tuple[Optional[str], Optional[str]]:
         def norm(s):
             s = s.replace("/", "-")
             parts = [int(p) for p in s.split("-")]
-            if parts[0] > 31:
+            if parts[0] > 31:   # assume YYYY-MM-DD
                 y, mth, d = parts
-            else:
+            else:               # assume MM-DD-YYYY
                 mth, d, y = parts
             return f"{y:04d}-{mth:02d}-{d:02d}"
         return norm(m.group(1)), norm(m.group(2))
@@ -362,14 +378,24 @@ def _parse_dates_fallback(q: str) -> Tuple[Optional[str], Optional[str]]:
     return None, None
 
 
-def llm_extract(query: str, mapping_df: pd.DataFrame, model: str = "gpt-4o-mini") -> Dict[str, Any]:
+def llm_extract(
+    query: str,
+    mapping_df: pd.DataFrame,
+    model: str = "gpt-4o-mini",
+    reference_date: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     Use OpenAI to map user's natural question to:
       - start (YYYY-MM-DD), end (YYYY-MM-DD), asset_name (exact from mapping list)
     Then map asset_name -> Ticker via mapping_df.
-    Falls back to heuristics if OpenAI not available.
+
+    IMPORTANT:
+      - All relative ranges (e.g. "past 5 years") are interpreted relative to reference_date.
+      - Best practice is to pass reference_date as the LAST date in the dataset.
     """
     allowed_assets: List[str] = mapping_df["Name"].dropna().astype(str).tolist()
+
+    ref = reference_date or date.today().isoformat()
 
     api_key = _get_openai_key()
     if api_key:
@@ -379,15 +405,19 @@ def llm_extract(query: str, mapping_df: pd.DataFrame, model: str = "gpt-4o-mini"
 
             system = (
                 "Extract a time range and the best-matching asset from the allowed list.\n"
+                f"Treat reference_date={ref} as 'today' for any relative phrases like "
+                "'past 5 years', 'last 12 months', YTD, MTD, QTD.\n"
                 "Return strict JSON with keys: start, end, asset_name.\n"
-                "Dates must be ISO YYYY-MM-DD. Expand quarters/years to full ranges.\n"
+                "Dates must be ISO YYYY-MM-DD.\n"
+                "If the user does not provide an end date, set end = reference_date.\n"
+                "Expand quarters/years to full ranges.\n"
                 "asset_name MUST be one of the allowed names verbatim."
             )
             asset_blob = "\n".join(f"- {a}" for a in allowed_assets[:800])
             user = (
                 f"Allowed assets:\n{asset_blob}\n\n"
                 f"Question: '''{query}'''\n"
-                "Respond JSON like: {\"start\":\"2025-01-01\",\"end\":\"2025-06-30\",\"asset_name\":\"S&P 500 INDEX\"}"
+                "Respond JSON like: {\"start\":\"2020-01-01\",\"end\":\"2025-06-30\",\"asset_name\":\"S&P 500 INDEX\"}"
             )
 
             resp = client.chat.completions.create(
@@ -397,7 +427,6 @@ def llm_extract(query: str, mapping_df: pd.DataFrame, model: str = "gpt-4o-mini"
                 temperature=0,
                 response_format={"type": "json_object"},
             )
-            import json
             data = json.loads(resp.choices[0].message.content)
 
             asset_name = data.get("asset_name")
@@ -406,22 +435,39 @@ def llm_extract(query: str, mapping_df: pd.DataFrame, model: str = "gpt-4o-mini"
                 asset_name = low_map[asset_name.lower()]
 
             start, end = data.get("start"), data.get("end")
-            if asset_name in allowed_assets and start and end:
+            if asset_name in allowed_assets:
                 ticker = mapping_df.loc[mapping_df["Name"] == asset_name, "Ticker"].iloc[0]
-                return {"start": start, "end": end, "asset": ticker, "asset_name": asset_name, "source": "openai"}
+                return {
+                    "start": start,
+                    "end": end,
+                    "asset": ticker,
+                    "asset_name": asset_name,
+                    "source": "openai",
+                    "reference_date": ref,
+                }
         except Exception:
             pass  # fall back below
 
-    # Fallback: fuzzy name + simple date rules
+    # Fallback: fuzzy name + simple date rules (anchored)
     try:
         import difflib
         best = difflib.get_close_matches(query, allowed_assets, n=1, cutoff=0.2)
         asset_name = best[0] if best else allowed_assets[0]
     except Exception:
         asset_name = allowed_assets[0]
+
     ticker = mapping_df.loc[mapping_df["Name"] == asset_name, "Ticker"].iloc[0]
-    s, e = _parse_dates_fallback(query)
-    return {"start": s, "end": e, "asset": ticker, "asset_name": asset_name, "source": "fallback"}
+    s, e = _parse_dates_fallback(query, ref)
+    if e is None:
+        e = ref
+    return {
+        "start": s,
+        "end": e,
+        "asset": ticker,
+        "asset_name": asset_name,
+        "source": "fallback",
+        "reference_date": ref,
+    }
 
 
 # ---------- CLI ----------
@@ -539,8 +585,13 @@ def run_streamlit_app():
         if parse_clicked:
             if mapping_df is None:
                 st.warning("Please provide TickerNameMapping.csv before parsing.")
+            elif df is None or df.empty:
+                st.warning("Please load a price file before parsing (to anchor 'today' to the dataset).")
             else:
-                parsed = llm_extract(question, mapping_df)
+                # Anchor reference_date to last date in dataset (the correct "today")
+                ref_date = df.index.max().date().isoformat()
+                parsed = llm_extract(question, mapping_df, reference_date=ref_date)
+
                 with st.expander("Parsed details"):
                     st.json(parsed)
 
@@ -560,14 +611,12 @@ def run_streamlit_app():
         else:
             default_asset_index = 0 if asset_cols else None
 
-        if df is not None:
+        if df is not None and not df.empty:
             min_d, max_d = df.index.min().date(), df.index.max().date()
         else:
             min_d, max_d = date(2000, 1, 1), date.today()
-        if st.session_state["pending_dates"]:
-            dr_default = st.session_state["pending_dates"]
-        else:
-            dr_default = (min_d, max_d)
+
+        dr_default = st.session_state["pending_dates"] if st.session_state["pending_dates"] else (min_d, max_d)
 
         asset = st.selectbox(
             "Asset column (Bloomberg ticker from your price file)",
